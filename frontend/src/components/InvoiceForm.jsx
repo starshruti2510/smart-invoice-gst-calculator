@@ -16,6 +16,7 @@ const InvoiceForm = () => {
     return savedMode === 'list' || savedMode === 'form' ? savedMode : 'form';
   });
   const [loadingInvoices, setLoadingInvoices] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState({ message: '', type: '' });
 
   const showToast = (message, type = 'info') => {
@@ -92,6 +93,7 @@ const InvoiceForm = () => {
   // Form submit karke backend mein data save karne ke liye
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
       const targetUrl = API_URL ? `${API_URL}/api/invoices` : 'http://localhost:5000/api/invoices';
       const response = await fetch(targetUrl, {
@@ -102,6 +104,26 @@ const InvoiceForm = () => {
       const resBody = await response.json().catch(() => null);
       if (response.ok) {
         showToast('Invoice saved successfully!', 'success');
+        
+        // Auto-increment invoice number if it ends in digits
+        const currentInvNumber = invoiceData.invoiceNumber;
+        let nextInvNumber = '';
+        const match = currentInvNumber.match(/(\d+)$/);
+        if (match) {
+          const numPart = match[0];
+          const incrementedNum = parseInt(numPart, 10) + 1;
+          const paddedNum = String(incrementedNum).padStart(numPart.length, '0');
+          nextInvNumber = currentInvNumber.substring(0, currentInvNumber.length - numPart.length) + paddedNum;
+        }
+
+        // Reset details
+        setInvoiceData({
+          invoiceNumber: nextInvNumber,
+          clientName: '',
+          transactionType: invoiceData.transactionType,
+          items: [{ itemName: '', price: 0, quantity: 1, gstRate: 18 }]
+        });
+
         await fetchInvoices(); // List refresh karne ke liye
       } else {
         console.error('Save failed:', resBody);
@@ -115,6 +137,8 @@ const InvoiceForm = () => {
     } catch (err) {
       console.error('Error saving invoice:', err);
       showToast('Error saving invoice. Please check your connection and try again.', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -257,11 +281,11 @@ const InvoiceForm = () => {
         <div className="form-row" style={{ display: 'flex', gap: '20px', marginBottom: '20px', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: '200px' }}>
             <label style={{ fontWeight: '700', display: 'block', marginBottom: '8px', color: '#334155' }}>Invoice Number</label>
-            <input type="text" placeholder="e.g., INV-001" required onChange={e => setInvoiceData({...invoiceData, invoiceNumber: e.target.value})} style={{ padding: '12px 14px', width: '100%', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', outline: 'none' }} />
+            <input type="text" placeholder="e.g., INV-001" required value={invoiceData.invoiceNumber} onChange={e => setInvoiceData({...invoiceData, invoiceNumber: e.target.value})} style={{ padding: '12px 14px', width: '100%', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', outline: 'none' }} />
           </div>
           <div style={{ flex: 1, minWidth: '200px' }}>
             <label style={{ fontWeight: '700', display: 'block', marginBottom: '8px', color: '#334155' }}>Client Name</label>
-            <input type="text" placeholder="Client Name" required onChange={e => setInvoiceData({...invoiceData, clientName: e.target.value})} style={{ padding: '12px 14px', width: '100%', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', outline: 'none' }} />
+            <input type="text" placeholder="Client Name" required value={invoiceData.clientName} onChange={e => setInvoiceData({...invoiceData, clientName: e.target.value})} style={{ padding: '12px 14px', width: '100%', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', outline: 'none' }} />
           </div>
           <div style={{ flex: 1, minWidth: '200px' }}>
             <label style={{ fontWeight: '700', display: 'block', marginBottom: '8px', color: '#334155' }}>Transaction Type</label>
@@ -308,7 +332,9 @@ const InvoiceForm = () => {
           <h3 style={{ margin: '0', color: '#10b981' }}>Grand Total: <span style={{ fontFamily: 'monospace', marginLeft: '10px' }}>₹{summary.grandTotal.toFixed(2)}</span></h3>
         </div>
 
-        <button type="submit" style={{ width: '100%', background: '#10b981', color: '#fff', padding: '14px', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', marginTop: '20px', transition: 'background 0.2s' }}>Save & Generate Invoice</button>
+        <button type="submit" disabled={saving} style={{ width: '100%', background: saving ? '#94a3b8' : '#10b981', color: '#fff', padding: '14px', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: saving ? 'not-allowed' : 'pointer', marginTop: '20px', transition: 'background 0.2s' }}>
+          {saving ? 'Saving & Generating...' : 'Save & Generate Invoice'}
+        </button>
       </form>
 
       {toast.message && (
