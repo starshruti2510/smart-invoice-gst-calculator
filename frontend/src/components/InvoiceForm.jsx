@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 const InvoiceForm = () => {
   const [invoiceData, setInvoiceData] = useState({
@@ -77,7 +77,8 @@ const InvoiceForm = () => {
   // Backend se saare purane invoices mangane ke liye function
   const fetchInvoices = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/invoices`);
+      const targetUrl = API_URL ? `${API_URL}/api/invoices` : 'http://localhost:5000/api/invoices';
+      const res = await fetch(targetUrl);
       const data = await res.json();
       setSavedInvoices(data);
       return data;
@@ -91,7 +92,8 @@ const InvoiceForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${API_URL}/api/invoices`, {
+      const targetUrl = API_URL ? `${API_URL}/api/invoices` : 'http://localhost:5000/api/invoices';
+      const response = await fetch(targetUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(invoiceData)
@@ -102,7 +104,12 @@ const InvoiceForm = () => {
         await fetchInvoices(); // List refresh karne ke liye
       } else {
         console.error('Save failed:', resBody);
-        showToast('Save failed: duplicate invoice', 'error');
+        const errorMessage = resBody?.message || '';
+        if (errorMessage.includes('duplicate key') || errorMessage.includes('E11000')) {
+          showToast('Save failed: Invoice Number already exists!', 'error');
+        } else {
+          showToast(errorMessage || 'Save failed: duplicate invoice', 'error');
+        }
       }
     } catch (err) {
       console.error('Error saving invoice:', err);
