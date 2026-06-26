@@ -39,6 +39,9 @@ A MERN-based web application that enables users to create GST-compliant invoices
 * Used environment variables for secure configuration
 * Designed a clean and responsive user interface
 
+## Live Demo
+
+* https://smart-invoice-gst-calculator-ui.vercel.app
 ## Installation
 
 ### Clone the repository
